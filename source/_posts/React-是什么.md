@@ -411,3 +411,163 @@ for (let i = 0; i < updatePayload.length; i += 2) {
   }
 }
 ```
+
+##### Deletion effect
+
+fiber 节点含有 Deletion effectTag，意味着该 fiber 节点对应的 DOM 节点需要从页面中删除，调用的方法为 [commitDeletion](https://github.com/facebook/react/blob/970fa122d8188bafa600e9b5214833487fbf1092/packages/react-reconciler/src/ReactFiberCommitWork.new.js#L1421)
+
+该方法会执行以下操作：
+
+1. 递归调用 Fiber 节点及其子孙 Fiber 节点中，fiber.tag 为 ClassComponent 的 [componentWillUnmount](https://github.com/facebook/react/blob/970fa122d8188bafa600e9b5214833487fbf1092/packages/react-reconciler/src/ReactFiberCommitWork.new.js#L920)生命周期钩子，从页面移除 Fiber 节点对应 DOM 节点
+2. 解绑 ref
+3. 调度 useEffect 的销毁函数
+
+### layout 阶段
+
+之所以称为 layout 阶段，是因为该阶段的代码都是在 DOM 渲染完成之后执行的。该阶段触发的生命周期钩子和 hook 能直接访问到改变后的 DOM，即该阶段是可以参与 DOM layout 的阶段。
+
+类似前两个阶段，该阶段也是遍历 effectList，执行函数。
+
+具体执行函数是 commitLayoutEffects。
+
+```js
+root.current = finishedWork
+
+nextEffect = firstEffect
+do {
+  try {
+    commitLayoutEffects(root, lanes)
+  } catch (error) {
+    invariant(nextEffect !== null, 'Should be working on an effect.')
+    captureCommitPhaseError(nextEffect, error)
+    nextEffect = nextEffect.nextEffect
+  }
+} while (nextEffect !== null)
+
+nextEffect = null
+```
+
+#### commitLayoutEffects
+
+[源码](https://github.com/facebook/react/blob/970fa122d8188bafa600e9b5214833487fbf1092/packages/react-reconciler/src/ReactFiberWorkLoop.new.js#L2302)
+
+```js
+function commitLayoutEffects(root: FiberRoot, committedLanes: Lanes) {
+  while (nextEffect !== null) {
+    const effectTag = nextEffect.effectTag
+
+    // 调用生命周期钩子和hook
+    if (effectTag & (Update | Callback)) {
+      const current = nextEffect.alternate
+      commitLayoutEffectOnFiber(root, current, nextEffect, committedLanes)
+    }
+
+    // 赋值ref
+    if (effectTag & Ref) {
+      commitAttachRef(nextEffect)
+    }
+
+    nextEffect = nextEffect.nextEffect
+  }
+}
+```
+
+commitLayoutEffects 做了两件事：
+
+1. commitLayoutEffectOnFiber（调用生命周期钩子和 hook 相关操作）
+2. commitAttachRef（赋值 ref）
+
+##### commitLayoutEffectOnFiber
+
+[commitLayoutEffectOnFiber](https://github.com/facebook/react/blob/970fa122d8188bafa600e9b5214833487fbf1092/packages/react-reconciler/src/ReactFiberCommitWork.new.js#L459) 是别名，原名为 commitLifeCycles。
+
+- 对于 ClassComponent，他会通过 current === null?区分是 mount 还是 update，调用 componentDidMount (opens new window)或 componentDidUpdate。
+
+触发状态更新的 `this.setState` 如果赋值了第二个参数回调函数，也会在此时调用。
+
+```js
+this.setState({ xxx: 1 }, () => {
+  console.log('i am update~')
+})
+```
+
+- 对于 FunctionComponent 及相关类型，他会调用 useLayoutEffect hook 的回调函数，调度 useEffect 的销毁与回调函数。
+  相关类型值特殊处理后的 FunctionComponent，比如 ForwardRef、React.memo 包裹的 FunctionComponent。
+
+```js
+switch (finishedWork.tag) {
+  // 以下都是FunctionComponent及相关类型
+  case FunctionComponent:
+  case ForwardRef:
+  case SimpleMemoComponent:
+  case Block: {
+    // 执行useLayoutEffect的回调函数
+    commitHookEffectListMount(HookLayout | HookHasEffect, finishedWork)
+    // 调度useEffect的销毁函数与回调函数
+    schedulePassiveEffects(finishedWork)
+    return
+  }
+}
+```
+
+在上一节介绍 update effect 时讲到，mutation 阶段会执行 useLayoutEffect hook 的销毁函数。
+
+结合这里可以看到，useLayoutEffect hook 从上一次更新的销毁函数调用到本次更新的回调函数调用时同步执行的。
+
+而 useEffect 则需要先调度，在 layout 阶段完成后再异步执行。
+
+- 对于 HostRoot，即 rootFiber，如果赋值了第三个参数回调函数，也会在此时调用。
+
+```js
+ReactDOM.render(<App />, document.querySelector('#root'), function () {
+  console.log('i am mount~')
+})
+```
+
+##### commitAttachRef
+
+[code](https://github.com/facebook/react/blob/970fa122d8188bafa600e9b5214833487fbf1092/packages/react-reconciler/src/ReactFiberCommitWork.new.js#L823)
+
+```js
+function commitAttachRef(finishedWork: Fiber) {
+  const ref = finishedWork.ref
+  if (ref !== null) {
+    const instance = finishedWork.stateNode
+    // 获取 DOM 实例
+    let instanceToUse
+    switch (finishedWork.tag) {
+      case HostComponent:
+        instanceToUse = getPublicInstance(instance)
+        break
+      default:
+        instanceToUse = instance
+    }
+    // Moved outside to ensure DCE works with this flag
+    if (enableScopeAPI && finishedWork.tag === ScopeComponent) {
+      instanceToUse = instance
+    }
+    // 更新 ref
+    if (typeof ref === 'function') {
+      ref(instanceToUse)
+    } else {
+      ref.current = instanceToUse
+    }
+  }
+}
+```
+
+### current Fiber 树切换
+
+至此，整个 layout 阶段就结束了。[code](https://github.com/facebook/react/blob/970fa122d8188bafa600e9b5214833487fbf1092/packages/react-reconciler/src/ReactFiberWorkLoop.new.js#L2022)
+
+```js
+root.current = finishedWork
+```
+
+workInProgress Fiber 树在 commit 阶段完成渲染后会变为 current Fiber 树。这行代码的作用就是切换 fiberRootNode 指向的 current Fiber 树。
+
+那么这行代码为什么在这里呢？（在 mutation 阶段结束后，layout 阶段开始前。）
+
+我们知道 componentWillUnmount 会在 mutation 阶段执行。此时 current Fiber 树还指向前一次更新的 Fiber 树，在生命周期钩子内获取的 DOM 还是更新前的。
+
+componentDidMount 和 componentDidUpdate 会在 layout 阶段执行。此时 current Fiber 树已经指向更新后的 Fiber 树，在生命周期钩子内获取的 DOM 就是更新后的。
