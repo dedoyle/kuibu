@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  
+  <title>React 状态更新 | 技术博客</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="React 的架构大概分为 Scheduler（调度器）—— 调度任务的优先级，高优任务优先进入 Reconciler Reconciler（协调器）—— 负责找出变化的组件 Renderer（渲染器）—— 负责将变化的组件渲染到页面上  Reconciler 工作的阶段被称为 render 阶段。因为在该阶段会调用组件的 render 方法。Renderer 工作的阶段被称为 commit 阶段">
+<meta property="og:type" content="article">
+<meta property="og:title" content="React 状态更新">
+<meta property="og:url" content="https://dedoyle.github.io/kuibu/2021/12/23/React-%E6%98%AF%E4%BB%80%E4%B9%88/index.html">
+<meta property="og:site_name" content="技术博客">
+<meta property="og:description" content="React 的架构大概分为 Scheduler（调度器）—— 调度任务的优先级，高优任务优先进入 Reconciler Reconciler（协调器）—— 负责找出变化的组件 Renderer（渲染器）—— 负责将变化的组件渲染到页面上  Reconciler 工作的阶段被称为 render 阶段。因为在该阶段会调用组件的 render 方法。Renderer 工作的阶段被称为 commit 阶段">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2021-12-23T14:35:09.000Z">
+<meta property="article:modified_time" content="2022-01-09T06:45:27.839Z">
+<meta property="article:author" content="dong">
+<meta property="article:tag" content="React, Webpack, Javascript, 前端">
+<meta name="twitter:card" content="summary">
+  
+    <link rel="alternate" href="/kuibu/atom.xml" title="技术博客" type="application/atom+xml">
+  
+  
+    <link rel="shortcut icon" href="/kuibu/favicon.png">
+  
+  
+    
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/typeface-source-code-pro@0.0.71/index.min.css">
+
+  
+  
+<link rel="stylesheet" href="/kuibu/css/style.css">
+
+  
+    
+<link rel="stylesheet" href="/kuibu/fancybox/jquery.fancybox.min.css">
+
+  
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+<body>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/kuibu/" id="logo">技术博客</a>
+      </h1>
+      
+    </div>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/kuibu/">Home</a>
+        
+          <a class="main-nav-link" href="/kuibu/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/kuibu/atom.xml" title="RSS 订阅"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="搜索"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="搜索"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://dedoyle.github.io/kuibu"></form>
+      </div>
+    </div>
+  </div>
+</header>
+
+      <div class="outer">
+        <section id="main"><article id="post-React-是什么" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+  <div class="article-meta">
+    <a href="/kuibu/2021/12/23/React-%E6%98%AF%E4%BB%80%E4%B9%88/" class="article-date">
+  <time class="dt-published" datetime="2021-12-23T14:35:09.000Z" itemprop="datePublished">2021-12-23</time>
+</a>
+    
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="p-name article-title" itemprop="headline name">
+      React 状态更新
+    </h1>
+  
+
+      </header>
+    
+    <div class="e-content article-entry" itemprop="articleBody">
+      
+        <h2 id="React-的架构大概分为"><a href="#React-的架构大概分为" class="headerlink" title="React 的架构大概分为"></a>React 的架构大概分为</h2><ul>
+<li>Scheduler（调度器）—— 调度任务的优先级，高优任务优先进入 Reconciler</li>
+<li>Reconciler（协调器）—— 负责找出变化的组件</li>
+<li>Renderer（渲染器）—— 负责将变化的组件渲染到页面上</li>
+</ul>
+<p>Reconciler 工作的阶段被称为 render 阶段。因为在该阶段会调用组件的 render 方法。<br>Renderer 工作的阶段被称为 commit 阶段。就像你完成一个需求的编码后执行 git commit 提交代码。commit 阶段会把 render 阶段提交的信息渲染在页面上。<br>render 与 commit 阶段统称为 work，即 React 在工作中。相对应的，如果任务正在 Scheduler 内调度，就不属于 work。</p>
+<h2 id="Render-阶段"><a href="#Render-阶段" class="headerlink" title="Render 阶段"></a>Render 阶段</h2><p>Render 阶段开始于 performSyncWorkOnRoot 或 performConcurrentWorkOnRoot 方法的调用。这取决于本次更新是同步更新还是异步更新。</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// performSyncWorkOnRoot会调用该方法</span></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">workLoopSync</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">  <span class="keyword">while</span> (workInProgress !== <span class="literal">null</span>) &#123;</span><br><span class="line">    performUnitOfWork(workInProgress)</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// performConcurrentWorkOnRoot会调用该方法</span></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">workLoopConcurrent</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">  <span class="keyword">while</span> (workInProgress !== <span class="literal">null</span> &amp;&amp; !shouldYield()) &#123;</span><br><span class="line">    performUnitOfWork(workInProgress)</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>可以看到，他们唯一的区别是是否调用 shouldYield。如果当前浏览器帧没有剩余时间，shouldYield 会中止循环，直到浏览器有空闲时间后再继续遍历。</p>
+<p>workInProgress 代表当前已创建的 workInProgress fiber。</p>
+<p>performUnitOfWork 方法会创建下一个 Fiber 节点并赋值给 workInProgress，并将 workInProgress 与已创建的 Fiber 节点连接起来构成 Fiber 树。</p>
+<p>我们知道 Fiber Reconciler 是从 Stack Reconciler 重构而来，通过遍历的方式实现可中断的递归，所以 performUnitOfWork 的工作可以分为两部分：“递”和“归”</p>
+<h3 id="“递”阶段"><a href="#“递”阶段" class="headerlink" title="“递”阶段"></a>“递”阶段</h3><p>首先从 rootFiber 开始向下深度优先遍历。为遍历到的每个 Fiber 节点调用 beginWork 方法。<br>该方法会根据传入的 Fiber 节点创建子 Fiber 节点，并将这两个 Fiber 节点连接起来。<br>当遍历到叶子节点（即没有子组件的组件）时就会进入“归”阶段。</p>
+<h3 id="“归”阶段"><a href="#“归”阶段" class="headerlink" title="“归”阶段"></a>“归”阶段</h3><p>在“归”阶段会调用 completeWork 处理 Fiber 节点。<br>当某个 Fiber 节点执行完 completeWork，<br>如果其存在兄弟 Fiber 节点（即 fiber.sibling !== null），会进入其兄弟 Fiber 的“递”阶段。<br>如果不存在兄弟 Fiber，会进入父级 Fiber 的“归”阶段。</p>
+<p>“递”和“归”阶段会交错执行直到“归”到 rootFiber。至此，render 阶段的工作就结束了。</p>
+<p>render 阶段全部工作完成。在 performSyncWorkOnRoot 函数中 fiberRootNode 被传递给 commitRoot 方法，开启 commit 阶段工作流程。</p>
+<h2 id="commit-阶段"><a href="#commit-阶段" class="headerlink" title="commit 阶段"></a>commit 阶段</h2><p>commitRoot 方法是 commit 阶段工作的起点。fiberRootNode 会作为传参。</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">commitRoot(root)</span><br></pre></td></tr></table></figure>
+
+<p>在 rootFiber.firstEffect 上保存了一条需要执行副作用的 Fiber 节点的单向链表 effectList，这些 Fiber 节点的 updateQueue 中保存了变化的 props。</p>
+<p>这些副作用对应的 DOM 操作在 commit 阶段执行。</p>
+<p>除此之外，一些生命周期钩子（比如 componentDidXXX）、hook（比如 useEffect）需要在 commit 阶段执行。</p>
+<p>commit 阶段的主要工作（即 Renderer 的工作流程）分为三部分：</p>
+<ul>
+<li>before mutation 阶段（执行 DOM 操作前）</li>
+<li>mutation 阶段（执行 DOM 操作）</li>
+<li>layout 阶段（执行 DOM 操作后）</li>
+</ul>
+<p>在 before mutation 阶段之前和 layout 阶段之后还有一些额外工作，涉及到比如 useEffect 的触发、优先级相关的重置、ref 的绑定/解绑。</p>
+<h3 id="before-mutation-之前"><a href="#before-mutation-之前" class="headerlink" title="before mutation 之前"></a>before mutation 之前</h3><p>commitRootImpl 方法中直到第一句 <code>if (firstEffect !== null)</code> 之前属于 before mutation 之前。</p>
+<p>before mutation 之前主要做一些变量赋值，状态重置的工作。</p>
+<h3 id="layout-之后"><a href="#layout-之后" class="headerlink" title="layout 之后"></a>layout 之后</h3><p>主要包括三点内容：</p>
+<ul>
+<li>useEffect 相关的处理。</li>
+<li>性能追踪相关。<br>源码里有很多和 interaction 相关的变量。他们都和追踪 React 渲染时间、性能相关，在 Profiler API 和 DevTools 中使用。</li>
+<li>在 commit 阶段会触发一些生命周期钩子（如 componentDidXXX）和 hook（如 useLayoutEffect、useEffect）。</li>
+</ul>
+<p>在这些回调方法中可能触发新的更新，新的更新会开启新的 render-commit 流程。</p>
+<h3 id="before-mutation"><a href="#before-mutation" class="headerlink" title="before mutation"></a>before mutation</h3><p>before mutation 阶段的代码很短，整个过程就是遍历 effectList 并调用 commitBeforeMutationEffects 函数处理。</p>
+<h4 id="commitBeforeMutationEffects"><a href="#commitBeforeMutationEffects" class="headerlink" title="commitBeforeMutationEffects"></a>commitBeforeMutationEffects</h4><p>整体可以分为三部分：</p>
+<ol>
+<li>处理 DOM 节点渲染/删除后的 autoFocus、blur 逻辑。</li>
+<li>调用 getSnapshotBeforeUpdate 生命周期钩子。</li>
+<li>调度 useEffect。</li>
+</ol>
+<h5 id="调用-getSnapshotBeforeUpdate"><a href="#调用-getSnapshotBeforeUpdate" class="headerlink" title="调用 getSnapshotBeforeUpdate"></a>调用 getSnapshotBeforeUpdate</h5><p>从 Reactv16 开始，componentWillXXX 钩子前增加了 UNSAFE_ 前缀。</p>
+<p>究其原因，是因为 Stack Reconciler 重构为 Fiber Reconciler 后，render 阶段的任务可能中断/重新开始，对应的组件在 render 阶段的生命周期钩子（即 componentWillXXX ）可能触发多次。</p>
+<p>为此，React 提供了替代的生命周期钩子 getSnapshotBeforeUpdate，可用于替换现有的 componentWillUnMount。</p>
+<p>我们可以看见，getSnapshotBeforeUpdate 是在 commit 阶段内的 before mutation 阶段调用的，由于 commit 阶段是同步的，所以不会遇到多次调用的问题。</p>
+<h5 id="调度-useEffect"><a href="#调度-useEffect" class="headerlink" title="调度 useEffect"></a>调度 useEffect</h5><p>scheduler 的 scheduleCallback，用于以某个优先级异步调度一个回调函数。</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 调度useEffect</span></span><br><span class="line"><span class="keyword">if</span> ((effectTag &amp; Passive) !== NoEffect) &#123;</span><br><span class="line">  <span class="keyword">if</span> (!rootDoesHavePassiveEffects) &#123;</span><br><span class="line">    rootDoesHavePassiveEffects = <span class="literal">true</span></span><br><span class="line">    scheduleCallback(NormalSchedulerPriority, <span class="function">() =&gt;</span> &#123;</span><br><span class="line">      <span class="comment">// 触发useEffect</span></span><br><span class="line">      flushPassiveEffects()</span><br><span class="line">      <span class="keyword">return</span> <span class="literal">null</span></span><br><span class="line">    &#125;)</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>被异步调度的回调函数就是触发 useEffect 的方法 flushPassiveEffects。下面看看为 useEffect 如何以及为何被异步调度。</p>
+<h5 id="如何异步调度-useEffect"><a href="#如何异步调度-useEffect" class="headerlink" title="如何异步调度 useEffect"></a>如何异步调度 useEffect</h5><p>flushPassiveEffects 方法内部会从全局变量 rootWithPendingPassiveEffects 获取 effectList。</p>
+<p>effectList 中保存了需要执行副作用的 Fiber 节点。其中副作用包括</p>
+<ul>
+<li>插入 DOM 节点（Placement）</li>
+<li>更新 DOM 节点（Update）</li>
+<li>删除 DOM 节点（Deletion）</li>
+</ul>
+<p>关于 flushPassiveEffects 的具体讲解参照 useEffect 与 useLayoutEffect 一节</p>
+<p>effectList 中保存了需要执行副作用的 Fiber 节点。其中副作用包括</p>
+<ul>
+<li>插入 DOM 节点（Placement）</li>
+<li>更新 DOM 节点（Update）</li>
+<li>删除 DOM 节点（Deletion）</li>
+</ul>
+<p>当一个 FunctionComponent 含有 useEffect 或 useLayoutEffect，他对应的 Fiber 节点也会被赋值 effectTag。</p>
+<p>整个 useEffect 异步调用分为三步：</p>
+<ul>
+<li>before mutation 阶段在 scheduleCallback 中调度 flushPassiveEffects</li>
+<li>layout 阶段之后将 effectList 赋值给 rootWithPendingPassiveEffects</li>
+<li>scheduleCallback 触发 flushPassiveEffects，flushPassiveEffects 内部遍历 rootWithPendingPassiveEffects</li>
+</ul>
+<p>为什么需要异步调用<br>摘录自 React 文档 effect 的执行时机：</p>
+<p>与 componentDidMount、componentDidUpdate 不同的是，在浏览器完成布局与绘制之后，传给 useEffect 的函数会延迟调用。这使得它适用于许多常见的副作用场景，比如设置订阅和事件处理等情况，因此不应在函数中执行阻塞浏览器更新屏幕的操作。</p>
+<p>可见，useEffect 异步执行的原因主要是<strong>防止同步执行时阻塞浏览器渲染</strong>。</p>
+<h3 id="mutation-阶段"><a href="#mutation-阶段" class="headerlink" title="mutation 阶段"></a>mutation 阶段</h3><p>mutation 阶段也是遍历 effectList，执行函数。这里执行的是 commitMutationEffects。</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">nextEffect = firstEffect</span><br><span class="line"><span class="keyword">do</span> &#123;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    commitMutationEffects(root, renderPriorityLevel)</span><br><span class="line">  &#125; <span class="keyword">catch</span> (error) &#123;</span><br><span class="line">    invariant(nextEffect !== <span class="literal">null</span>, <span class="string">&#x27;Should be working on an effect.&#x27;</span>)</span><br><span class="line">    captureCommitPhaseError(nextEffect, error)</span><br><span class="line">    nextEffect = nextEffect.nextEffect</span><br><span class="line">  &#125;</span><br><span class="line">&#125; <span class="keyword">while</span> (nextEffect !== <span class="literal">null</span>)</span><br></pre></td></tr></table></figure>
+
+<h4 id="commitMutationEffects"><a href="#commitMutationEffects" class="headerlink" title="commitMutationEffects"></a>commitMutationEffects</h4><figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">commitMutationEffects</span>(<span class="params">root: FiberRoot, renderPriorityLevel</span>) </span>&#123;</span><br><span class="line">  <span class="comment">// 遍历effectList</span></span><br><span class="line">  <span class="keyword">while</span> (nextEffect !== <span class="literal">null</span>) &#123;</span><br><span class="line">    <span class="keyword">const</span> effectTag = nextEffect.effectTag</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 根据 ContentReset effectTag重置文字节点</span></span><br><span class="line">    <span class="keyword">if</span> (effectTag &amp; ContentReset) &#123;</span><br><span class="line">      commitResetTextContent(nextEffect)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 更新ref</span></span><br><span class="line">    <span class="keyword">if</span> (effectTag &amp; Ref) &#123;</span><br><span class="line">      <span class="keyword">const</span> current = nextEffect.alternate</span><br><span class="line">      <span class="keyword">if</span> (current !== <span class="literal">null</span>) &#123;</span><br><span class="line">        commitDetachRef(current)</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 根据 effectTag 分别处理</span></span><br><span class="line">    <span class="keyword">const</span> primaryEffectTag =</span><br><span class="line">      effectTag &amp; (Placement | Update | Deletion | Hydrating)</span><br><span class="line">    <span class="keyword">switch</span> (primaryEffectTag) &#123;</span><br><span class="line">      <span class="comment">// 插入DOM</span></span><br><span class="line">      <span class="keyword">case</span> Placement: &#123;</span><br><span class="line">        commitPlacement(nextEffect)</span><br><span class="line">        <span class="comment">// ~ 取反</span></span><br><span class="line">        nextEffect.effectTag &amp;= ~Placement</span><br><span class="line">        <span class="keyword">break</span></span><br><span class="line">      &#125;</span><br><span class="line">      <span class="comment">// 插入DOM 并 更新DOM</span></span><br><span class="line">      <span class="keyword">case</span> PlacementAndUpdate: &#123;</span><br><span class="line">        <span class="comment">// 插入</span></span><br><span class="line">        commitPlacement(nextEffect)</span><br><span class="line"></span><br><span class="line">        nextEffect.effectTag &amp;= ~Placement</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 更新</span></span><br><span class="line">        <span class="comment">// current        是现在的 fiber</span></span><br><span class="line">        <span class="comment">// workInProgress 是新的 fiber</span></span><br><span class="line">        <span class="comment">// alternate      它们通过 alternate 连接</span></span><br><span class="line">        <span class="keyword">const</span> current = nextEffect.alternate</span><br><span class="line">        commitWork(current, nextEffect)</span><br><span class="line">        <span class="keyword">break</span></span><br><span class="line">      &#125;</span><br><span class="line">      <span class="comment">// SSR</span></span><br><span class="line">      <span class="keyword">case</span> Hydrating: &#123;</span><br><span class="line">        nextEffect.effectTag &amp;= ~Hydrating</span><br><span class="line">        <span class="keyword">break</span></span><br><span class="line">      &#125;</span><br><span class="line">      <span class="comment">// SSR</span></span><br><span class="line">      <span class="keyword">case</span> HydratingAndUpdate: &#123;</span><br><span class="line">        nextEffect.effectTag &amp;= ~Hydrating</span><br><span class="line"></span><br><span class="line">        <span class="keyword">const</span> current = nextEffect.alternate</span><br><span class="line">        commitWork(current, nextEffect)</span><br><span class="line">        <span class="keyword">break</span></span><br><span class="line">      &#125;</span><br><span class="line">      <span class="comment">// 更新DOM</span></span><br><span class="line">      <span class="keyword">case</span> Update: &#123;</span><br><span class="line">        <span class="keyword">const</span> current = nextEffect.alternate</span><br><span class="line">        commitWork(current, nextEffect)</span><br><span class="line">        <span class="keyword">break</span></span><br><span class="line">      &#125;</span><br><span class="line">      <span class="comment">// 删除DOM</span></span><br><span class="line">      <span class="keyword">case</span> Deletion: &#123;</span><br><span class="line">        commitDeletion(root, nextEffect, renderPriorityLevel)</span><br><span class="line">        <span class="keyword">break</span></span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    nextEffect = nextEffect.nextEffect</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>commitMutationEffects 会遍历 effectList，对每个 Fiber 节点执行如下三个操作：</p>
+<ul>
+<li>根据 ContentReset effectTag 重置文字节点</li>
+<li>更新 ref</li>
+<li>根据 effectTag 分别处理，其中 effectTag 包括(Placement | Update | Deletion | Hydrating)</li>
+</ul>
+<h5 id="Placement-effect"><a href="#Placement-effect" class="headerlink" title="Placement effect"></a>Placement effect</h5><p>当 Fiber 节点含有 Placement effectTag，意味着该 Fiber 节点对应的 DOM 节点需要插入到页面中。<a target="_blank" rel="noopener" href="https://github.com/facebook/react/blob/970fa122d8188bafa600e9b5214833487fbf1092/packages/react-reconciler/src/ReactFiberCommitWork.new.js#L1156">code</a></p>
+<ol>
+<li><p>获取父级 DOM 节点。其中 finishedWork 为传入的 Fiber 节点。</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> parentFiber = getHostParentFiber(finishedWork)</span><br><span class="line"><span class="comment">// 父级DOM节点</span></span><br><span class="line"><span class="keyword">const</span> parentStateNode = parentFiber.stateNode</span><br></pre></td></tr></table></figure></li>
+<li><p>获取 Fiber 节点的 DOM 兄弟节点</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> before = getHostSibling(finishedWork)</span><br></pre></td></tr></table></figure></li>
+<li><p>根据 DOM 兄弟节点是否存在决定调用 parentNode.insertBefore 或 parentNode.appendChild 执行 DOM 插入操作。</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// parentStateNode是否是rootFiber</span></span><br><span class="line"><span class="keyword">if</span> (isContainer) &#123;</span><br><span class="line">  insertOrAppendPlacementNodeIntoContainer(finishedWork, before, parent)</span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">  insertOrAppendPlacementNode(finishedWork, before, parent)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+</ol>
+<p>值得注意的是，getHostSibling（获取兄弟 DOM 节点）的执行很耗时，当在同一个父 Fiber 节点下依次执行多个插入操作，getHostSibling 算法的复杂度为指数级。</p>
+<p>这是由于 Fiber 节点不只包括 HostComponent，所以 Fiber 树和渲染的 DOM 树节点并不是一一对应的。要从 Fiber 节点找到 DOM 节点很可能跨层级遍历。</p>
+<p>考虑如下例子：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">Item</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> &lt;li&gt;&lt;li&gt;;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">App</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> (</span><br><span class="line">    <span class="xml"><span class="tag">&lt;<span class="name">div</span>&gt;</span></span></span><br><span class="line"><span class="xml">      <span class="tag">&lt;<span class="name">Item</span>/&gt;</span></span></span><br><span class="line"><span class="xml">    <span class="tag">&lt;/<span class="name">div</span>&gt;</span></span></span><br><span class="line">  )</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">ReactDOM.render(<span class="xml"><span class="tag">&lt;<span class="name">App</span>/&gt;</span></span>, <span class="built_in">document</span>.getElementById(<span class="string">&#x27;root&#x27;</span>));</span><br></pre></td></tr></table></figure>
+
+<p>对应的 Fiber 树和 DOM 树结构为：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Fiber树</span></span><br><span class="line">          child      child      child       child</span><br><span class="line">rootFiber -----&gt; App -----&gt; div -----&gt; Item -----&gt; li</span><br><span class="line"></span><br><span class="line"><span class="comment">// DOM树</span></span><br><span class="line">#root ---&gt; div ---&gt; li</span><br></pre></td></tr></table></figure>
+
+<p>当在 div 的子节点 Item 前插入一个新节点 p，即 App 变为：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">App</span>(<span class="params"></span>) </span>&#123;</span><br><span class="line">  <span class="keyword">return</span> (</span><br><span class="line">    <span class="xml"><span class="tag">&lt;<span class="name">div</span>&gt;</span></span></span><br><span class="line"><span class="xml">      <span class="tag">&lt;<span class="name">p</span>&gt;</span><span class="tag">&lt;/<span class="name">p</span>&gt;</span></span></span><br><span class="line"><span class="xml">      <span class="tag">&lt;<span class="name">Item</span> /&gt;</span></span></span><br><span class="line"><span class="xml">    <span class="tag">&lt;/<span class="name">div</span>&gt;</span></span></span><br><span class="line">  )</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>对应的 Fiber 树和 DOM 树结构为：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Fiber树</span></span><br><span class="line">          child      child      child</span><br><span class="line">rootFiber -----&gt; App -----&gt; div -----&gt; p</span><br><span class="line">                                       | sibling       child</span><br><span class="line">                                       | -------&gt; Item -----&gt; li</span><br><span class="line"><span class="comment">// DOM树</span></span><br><span class="line">#root ---&gt; div ---&gt; p</span><br><span class="line">             |</span><br><span class="line">               ---&gt; li</span><br></pre></td></tr></table></figure>
+
+<p>此时 DOM 节点 p 的兄弟节点为 li，而 Fiber 节点 p 对应的兄弟 DOM 节点为 <code>fiberP.sibling.child</code>, 即 fiber p 的兄弟 fiber Item 的子 fiber li。</p>
+<h5 id="Update-effect"><a href="#Update-effect" class="headerlink" title="Update effect"></a>Update effect</h5><p>当 Fiber 节点含有 Update effectTag，意味着该 Fiber 节点需要更新。调用的方法为 commitWork，他会根据 Fiber.tag 分别处理。<a target="_blank" rel="noopener" href="https://github.com/facebook/react/blob/970fa122d8188bafa600e9b5214833487fbf1092/packages/react-reconciler/src/ReactFiberCommitWork.new.js#L1441">code</a></p>
+<h6 id="FunctionComponent-mutation"><a href="#FunctionComponent-mutation" class="headerlink" title="FunctionComponent mutation"></a>FunctionComponent mutation</h6><p>当 fiber.tag 为 FunctionComponent，会调用 <a target="_blank" rel="noopener" href="https://github.com/facebook/react/blob/970fa122d8188bafa600e9b5214833487fbf1092/packages/react-reconciler/src/ReactFiberCommitWork.new.js#L314">commitHookEffectListUnmount</a>。该方法会遍历 effectList，执行所有 useLayoutEffect hook 的销毁函数。（mutation 阶段会执行 useLayoutEffect 的销毁函数!）</p>
+<p>所谓“销毁函数”，见如下例子：</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">useLayoutEffect(<span class="function">() =&gt;</span> &#123;</span><br><span class="line">  <span class="comment">// ...一些副作用逻辑</span></span><br><span class="line"></span><br><span class="line">  <span class="keyword">return</span> <span class="function">() =&gt;</span> &#123;</span><br><span class="line">    <span class="comment">// ...这就是销毁函数</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<h6 id="HostComponent-mutation"><a href="#HostComponent-mutation" class="headerlink" title="HostComponent mutation"></a>HostComponent mutation</h6><p>当 fiber.tag 为 HostComponent，会调用 <a target="_blank" rel="noopener" href="https://github.com/facebook/react/blob/970fa122d8188bafa600e9b5214833487fbf1092/packages/react-dom/src/client/ReactDOMHostConfig.js#L423">commitUpdate</a>。</p>
+<p>最终会在 <a target="_blank" rel="noopener" href="https://github.com/facebook/react/blob/970fa122d8188bafa600e9b5214833487fbf1092/packages/react-dom/src/client/ReactDOMComponent.js#L378">updateDOMProperties</a>中将 <a target="_blank" rel="noopener" href="https://github.com/facebook/react/blob/970fa122d8188bafa600e9b5214833487fbf1092/packages/react-reconciler/src/ReactFiberCompleteWork.new.js#L229">render 阶段 completeWork</a>中为 Fiber 节点赋值的 updateQueue 对应的内容渲染在页面上。</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (<span class="keyword">let</span> i = <span class="number">0</span>; i &lt; updatePayload.length; i += <span class="number">2</span>) &#123;</span><br><span class="line">  <span class="keyword">const</span> propKey = updatePayload[i]</span><br><span class="line">  <span class="keyword">const</span> propValue = updatePayload[i + <span class="number">1</span>]</span><br><span class="line"></span><br><span class="line">  <span class="comment">// 处理 style</span></span><br><span class="line">  <span class="keyword">if</span> (propKey === STYLE) &#123;</span><br><span class="line">    setValueForStyles(domElement, propValue)</span><br><span class="line">    <span class="comment">// 处理 DANGEROUSLY_SET_INNER_HTML</span></span><br><span class="line">  &#125; <span class="keyword">else</span> <span class="keyword">if</span> (propKey === DANGEROUSLY_SET_INNER_HTML) &#123;</span><br><span class="line">    setInnerHTML(domElement, propValue)</span><br><span class="line">    <span class="comment">// 处理 children</span></span><br><span class="line">  &#125; <span class="keyword">else</span> <span class="keyword">if</span> (propKey === CHILDREN) &#123;</span><br><span class="line">    setTextContent(domElement, propValue)</span><br><span class="line">  &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    <span class="comment">// 处理剩余 props</span></span><br><span class="line">    setValueForProperty(domElement, propKey, propValue, isCustomComponentTag)</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h5 id="Deletion-effect"><a href="#Deletion-effect" class="headerlink" title="Deletion effect"></a>Deletion effect</h5><p>fiber 节点含有 Deletion effectTag，意味着该 fiber 节点对应的 DOM 节点需要从页面中删除，调用的方法为 <a target="_blank" rel="noopener" href="https://github.com/facebook/react/blob/970fa122d8188bafa600e9b5214833487fbf1092/packages/react-reconciler/src/ReactFiberCommitWork.new.js#L1421">commitDeletion</a></p>
+<p>该方法会执行以下操作：</p>
+<ol>
+<li>递归调用 Fiber 节点及其子孙 Fiber 节点中，fiber.tag 为 ClassComponent 的 <a target="_blank" rel="noopener" href="https://github.com/facebook/react/blob/970fa122d8188bafa600e9b5214833487fbf1092/packages/react-reconciler/src/ReactFiberCommitWork.new.js#L920">componentWillUnmount</a>生命周期钩子，从页面移除 Fiber 节点对应 DOM 节点</li>
+<li>解绑 ref</li>
+<li>调度 useEffect 的销毁函数</li>
+</ol>
+<h3 id="layout-阶段"><a href="#layout-阶段" class="headerlink" title="layout 阶段"></a>layout 阶段</h3><p>之所以称为 layout 阶段，是因为该阶段的代码都是在 DOM 渲染完成之后执行的。该阶段触发的生命周期钩子和 hook 能直接访问到改变后的 DOM，即该阶段是可以参与 DOM layout 的阶段。</p>
+<p>类似前两个阶段，该阶段也是遍历 effectList，执行函数。</p>
+<p>具体执行函数是 commitLayoutEffects。</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">root.current = finishedWork</span><br><span class="line"></span><br><span class="line">nextEffect = firstEffect</span><br><span class="line"><span class="keyword">do</span> &#123;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    commitLayoutEffects(root, lanes)</span><br><span class="line">  &#125; <span class="keyword">catch</span> (error) &#123;</span><br><span class="line">    invariant(nextEffect !== <span class="literal">null</span>, <span class="string">&#x27;Should be working on an effect.&#x27;</span>)</span><br><span class="line">    captureCommitPhaseError(nextEffect, error)</span><br><span class="line">    nextEffect = nextEffect.nextEffect</span><br><span class="line">  &#125;</span><br><span class="line">&#125; <span class="keyword">while</span> (nextEffect !== <span class="literal">null</span>)</span><br><span class="line"></span><br><span class="line">nextEffect = <span class="literal">null</span></span><br></pre></td></tr></table></figure>
+
+<h4 id="commitLayoutEffects"><a href="#commitLayoutEffects" class="headerlink" title="commitLayoutEffects"></a>commitLayoutEffects</h4><p><a target="_blank" rel="noopener" href="https://github.com/facebook/react/blob/970fa122d8188bafa600e9b5214833487fbf1092/packages/react-reconciler/src/ReactFiberWorkLoop.new.js#L2302">源码</a></p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">commitLayoutEffects</span>(<span class="params">root: FiberRoot, committedLanes: Lanes</span>) </span>&#123;</span><br><span class="line">  <span class="keyword">while</span> (nextEffect !== <span class="literal">null</span>) &#123;</span><br><span class="line">    <span class="keyword">const</span> effectTag = nextEffect.effectTag</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 调用生命周期钩子和hook</span></span><br><span class="line">    <span class="keyword">if</span> (effectTag &amp; (Update | Callback)) &#123;</span><br><span class="line">      <span class="keyword">const</span> current = nextEffect.alternate</span><br><span class="line">      commitLayoutEffectOnFiber(root, current, nextEffect, committedLanes)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 赋值ref</span></span><br><span class="line">    <span class="keyword">if</span> (effectTag &amp; Ref) &#123;</span><br><span class="line">      commitAttachRef(nextEffect)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    nextEffect = nextEffect.nextEffect</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>commitLayoutEffects 做了两件事：</p>
+<ol>
+<li>commitLayoutEffectOnFiber（调用生命周期钩子和 hook 相关操作）</li>
+<li>commitAttachRef（赋值 ref）</li>
+</ol>
+<h5 id="commitLayoutEffectOnFiber"><a href="#commitLayoutEffectOnFiber" class="headerlink" title="commitLayoutEffectOnFiber"></a>commitLayoutEffectOnFiber</h5><p><a target="_blank" rel="noopener" href="https://github.com/facebook/react/blob/970fa122d8188bafa600e9b5214833487fbf1092/packages/react-reconciler/src/ReactFiberCommitWork.new.js#L459">commitLayoutEffectOnFiber</a> 是别名，原名为 commitLifeCycles。</p>
+<ul>
+<li>对于 ClassComponent，他会通过 current === null?区分是 mount 还是 update，调用 componentDidMount (opens new window)或 componentDidUpdate。</li>
+</ul>
+<p>触发状态更新的 <code>this.setState</code> 如果赋值了第二个参数回调函数，也会在此时调用。</p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">this</span>.setState(&#123; <span class="attr">xxx</span>: <span class="number">1</span> &#125;, <span class="function">() =&gt;</span> &#123;</span><br><span class="line">  <span class="built_in">console</span>.log(<span class="string">&#x27;i am update~&#x27;</span>)</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>对于 FunctionComponent 及相关类型，他会调用 useLayoutEffect hook 的回调函数，调度 useEffect 的销毁与回调函数。<br>相关类型值特殊处理后的 FunctionComponent，比如 ForwardRef、React.memo 包裹的 FunctionComponent。</li>
+</ul>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">switch</span> (finishedWork.tag) &#123;</span><br><span class="line">  <span class="comment">// 以下都是FunctionComponent及相关类型</span></span><br><span class="line">  <span class="keyword">case</span> FunctionComponent:</span><br><span class="line">  <span class="keyword">case</span> ForwardRef:</span><br><span class="line">  <span class="keyword">case</span> SimpleMemoComponent:</span><br><span class="line">  <span class="keyword">case</span> Block: &#123;</span><br><span class="line">    <span class="comment">// 执行useLayoutEffect的回调函数</span></span><br><span class="line">    commitHookEffectListMount(HookLayout | HookHasEffect, finishedWork)</span><br><span class="line">    <span class="comment">// 调度useEffect的销毁函数与回调函数</span></span><br><span class="line">    schedulePassiveEffects(finishedWork)</span><br><span class="line">    <span class="keyword">return</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在上一节介绍 update effect 时讲到，mutation 阶段会执行 useLayoutEffect hook 的销毁函数。</p>
+<p>结合这里可以看到，useLayoutEffect hook 从上一次更新的销毁函数调用到本次更新的回调函数调用时同步执行的。</p>
+<p>而 useEffect 则需要先调度，在 layout 阶段完成后再异步执行。</p>
+<ul>
+<li>对于 HostRoot，即 rootFiber，如果赋值了第三个参数回调函数，也会在此时调用。</li>
+</ul>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">ReactDOM.render(<span class="xml"><span class="tag">&lt;<span class="name">App</span> /&gt;</span></span>, <span class="built_in">document</span>.querySelector(<span class="string">&#x27;#root&#x27;</span>), <span class="function"><span class="keyword">function</span> (<span class="params"></span>) </span>&#123;</span><br><span class="line">  <span class="built_in">console</span>.log(<span class="string">&#x27;i am mount~&#x27;</span>)</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+
+<h5 id="commitAttachRef"><a href="#commitAttachRef" class="headerlink" title="commitAttachRef"></a>commitAttachRef</h5><p><a target="_blank" rel="noopener" href="https://github.com/facebook/react/blob/970fa122d8188bafa600e9b5214833487fbf1092/packages/react-reconciler/src/ReactFiberCommitWork.new.js#L823">code</a></p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">function</span> <span class="title">commitAttachRef</span>(<span class="params">finishedWork: Fiber</span>) </span>&#123;</span><br><span class="line">  <span class="keyword">const</span> ref = finishedWork.ref</span><br><span class="line">  <span class="keyword">if</span> (ref !== <span class="literal">null</span>) &#123;</span><br><span class="line">    <span class="keyword">const</span> instance = finishedWork.stateNode</span><br><span class="line">    <span class="comment">// 获取 DOM 实例</span></span><br><span class="line">    <span class="keyword">let</span> instanceToUse</span><br><span class="line">    <span class="keyword">switch</span> (finishedWork.tag) &#123;</span><br><span class="line">      <span class="keyword">case</span> HostComponent:</span><br><span class="line">        instanceToUse = getPublicInstance(instance)</span><br><span class="line">        <span class="keyword">break</span></span><br><span class="line">      <span class="attr">default</span>:</span><br><span class="line">        instanceToUse = instance</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// Moved outside to ensure DCE works with this flag</span></span><br><span class="line">    <span class="keyword">if</span> (enableScopeAPI &amp;&amp; finishedWork.tag === ScopeComponent) &#123;</span><br><span class="line">      instanceToUse = instance</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">// 更新 ref</span></span><br><span class="line">    <span class="keyword">if</span> (<span class="keyword">typeof</span> ref === <span class="string">&#x27;function&#x27;</span>) &#123;</span><br><span class="line">      ref(instanceToUse)</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      ref.current = instanceToUse</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="current-Fiber-树切换"><a href="#current-Fiber-树切换" class="headerlink" title="current Fiber 树切换"></a>current Fiber 树切换</h3><p>至此，整个 layout 阶段就结束了。<a target="_blank" rel="noopener" href="https://github.com/facebook/react/blob/970fa122d8188bafa600e9b5214833487fbf1092/packages/react-reconciler/src/ReactFiberWorkLoop.new.js#L2022">code</a></p>
+<figure class="highlight js"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">root.current = finishedWork</span><br></pre></td></tr></table></figure>
+
+<p>workInProgress Fiber 树在 commit 阶段完成渲染后会变为 current Fiber 树。这行代码的作用就是切换 fiberRootNode 指向的 current Fiber 树。</p>
+<p>那么这行代码为什么在这里呢？（在 mutation 阶段结束后，layout 阶段开始前。）</p>
+<p>我们知道 componentWillUnmount 会在 mutation 阶段执行。此时 current Fiber 树还指向前一次更新的 Fiber 树，在生命周期钩子内获取的 DOM 还是更新前的。</p>
+<p>componentDidMount 和 componentDidUpdate 会在 layout 阶段执行。此时 current Fiber 树已经指向更新后的 Fiber 树，在生命周期钩子内获取的 DOM 就是更新后的。</p>
+
+      
+    </div>
+    <footer class="article-footer">
+      <a data-url="https://dedoyle.github.io/kuibu/2021/12/23/React-%E6%98%AF%E4%BB%80%E4%B9%88/" data-id="ckyfvgn6900010fib7slmh18r" data-title="React 状态更新" class="article-share-link">分享</a>
+      
+      
+      
+    </footer>
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/kuibu/2022/01/09/Event-Loop/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">前一篇</strong>
+      <div class="article-nav-title">
+        
+          Event Loop
+        
+      </div>
+    </a>
+  
+  
+</nav>
+
+  
+</article>
+
+
+</section>
+        
+          <aside id="sidebar">
+  
+    
+
+  
+    
+
+  
+    
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">归档</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/kuibu/archives/2022/01/">一月 2022</a></li><li class="archive-list-item"><a class="archive-list-link" href="/kuibu/archives/2021/12/">十二月 2021</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">最新文章</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/kuibu/2022/01/09/Event-Loop/">Event Loop</a>
+          </li>
+        
+          <li>
+            <a href="/kuibu/2021/12/23/React-%E6%98%AF%E4%BB%80%E4%B9%88/">React 状态更新</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
+</aside>
+        
+      </div>
+      <footer id="footer">
+  
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      
+      &copy; 2022 dong<br>
+      Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
+</footer>
+
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/kuibu/" class="mobile-nav-link">Home</a>
+  
+    <a href="/kuibu/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
+
+<script src="/kuibu/js/jquery-3.4.1.min.js"></script>
+
+
+
+  
+<script src="/kuibu/fancybox/jquery.fancybox.min.js"></script>
+
+
+
+
+<script src="/kuibu/js/script.js"></script>
+
+
+
+
+
+  </div>
+</body>
+</html>
